@@ -1,0 +1,116 @@
+---
+title: "Final project"
+author: "Luyang Yu"
+date: "4/30/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r kaggle graduate admission dataset}
+library(readr)
+library(dplyr)
+library(tidyverse)
+library(psych)
+library(lfe)
+library(ggplot2)
+library(lattice)
+library(purrr)
+
+
+Admission_Predict_Ver1_1 <- read_csv("Downloads/graduate-admissions/Admission_Predict_Ver1.1.csv")
+##Delete null values in the dataset##
+Admission_Predict_Ver1_1=Admission_Predict_Ver1_1[!is.na(Admission_Predict_Ver1_1$TOEFL_score),]
+Admission_Predict_Ver1_1=Admission_Predict_Ver1_1[!is.na(Admission_Predict_Ver1_1$GRE_score),]
+Admission_Predict_Ver1_1=Admission_Predict_Ver1_1[!is.na(Admission_Predict_Ver1_1$University_Rating),]
+Admission_Predict_Ver1_1=Admission_Predict_Ver1_1[!is.na(Admission_Predict_Ver1_1$SOP),]
+Admission_Predict_Ver1_1=Admission_Predict_Ver1_1[!is.na(Admission_Predict_Ver1_1$LOR),]
+Admission_Predict_Ver1_1=Admission_Predict_Ver1_1[!is.na(Admission_Predict_Ver1_1$CGPA),]
+Admission_Predict_Ver1_1=Admission_Predict_Ver1_1[!is.na(Admission_Predict_Ver1_1$Research),]
+Admission_Predict_Ver1_1=Admission_Predict_Ver1_1[!is.na(Admission_Predict_Ver1_1$Chance_of_Admit),]
+View(Admission_Predict_Ver1_1)
+##summary the dataset##
+summary(Admission_Predict_Ver1_1)
+
+describe(Admission_Predict_Ver1_1)
+
+##calculate the means for every variable to have a general look at the dataset##
+colMeans(Admission_Predict_Ver1_1)
+
+## Fit the first regression model to the dataset##
+lm_1 = felm(data = Admission_Predict_Ver1_1,formula = Chance_of_Admit~GRE_score+TOEFL_score +LOR+SOP+CGPA+University_Rating+Research)
+summary(lm_1)
+
+##Fit a new regression model with the SOP and Univeristy ratings removed##
+lm_2 = felm(data = Admission_Predict_Ver1_1,formula = Chance_of_Admit~GRE_score+TOEFL_score +LOR+CGPA+Research)
+summary(lm_2)
+
+##delete the SOP and university rating columns for a further data cleaning##
+Admission_Predict = subset(Admission_Predict_Ver1_1,select = -c(SOP,University_Rating))
+View(Admission_Predict)
+
+## rearrange the dataset in ascending order with respect to chance of admit##
+Admission_Predict_rearrange <- na.omit(Admission_Predict %>% 
+                     mutate(rank = min_rank(desc(Chance_of_Admit))) %>%
+                     arrange(rank))
+print(Admission_Predict_rearrange)
+
+##regression plot for each column ##
+
+xyplot(GRE_score + TOEFL_score + LOR + CGPA + Research ~ Chance_of_Admit , data = Admission_Predict,
+       type = "l", auto.key = TRUE)
+
+##create a new column consisting of an lm model for each student, the regression is for CGPA~Chance of Admit##
+d_Admission <- data.frame(Admission_Predict_rearrange)
+
+lm_each_student <- function(d_Admission) {
+    lr <- lm(CGPA ~ Chance_of_Admit, data = d_Admission )
+  return(lr)
+}
+
+##If consider 0.8 as a high chance of admits, find the least CGPA value##
+Admission_Predict_0.85<- filter(Admission_Predict, Chance_of_Admit >= 0.85)
+head(Admission_Predict_0.85)
+arrange(Admission_Predict_0.85,CGPA)
+
+##histogram of CGPA to comapre##
+histogram(Admission_Predict_0.85$CGPA,col="dark green")
+
+```
+
+
+```{r UCLA statistics}
+library(readr)
+library(scales)
+##data cleaning##
+binary <- read_csv("Downloads/binary.csv")
+##delete the rank column##
+UCLA<-subset(binary,select = -c(rank))
+##check if there is any null value##
+UCLA=UCLA[!is.na(UCLA$gpa),]
+UCLA=UCLA[!is.na(UCLA$gre),]
+UCLA=UCLA[!is.na(UCLA$admit),]
+print(UCLA)
+
+##only leave the ones admitted##
+UCLA_admitted<- filter(UCLA, admit == 1)
+print(UCLA_admitted)
+
+##rearrange the dataset in ascending order with respect to gpa##
+UCLA_admitted_re<-arrange(UCLA_admitted,gpa)
+histogram(UCLA_admitted_re$gpa,col="dark blue")
+
+
+```
+
+
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
